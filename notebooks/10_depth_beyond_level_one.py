@@ -11,7 +11,7 @@
 # - `bookTicker`: every change to the best bid/ask (like the 2024 file)
 # - `aggTrade`: every aggressive order
 #
-# Recording your own data teaches things clean datasets hide: clocks, latency, disconnects. Re-run it yourself
+# Recording your own data teaches things clean datasets hide: drifting clocks, latency, disconnects. Re-run it yourself
 # and every number below will change. That's the point.
 
 # %%
@@ -48,11 +48,34 @@ print(f"receive time − Binance send time: 5th pct {np.percentile(latency, 5):.
 print(f"share of messages that 'arrived before they were sent': {np.mean(latency < 0):.1%}")
 
 # %% [markdown]
-# Some messages "arrive before they were sent", which is impossible. Our PC's clock and Binance's clock disagree by a
-# few milliseconds. Over a home internet connection the median one-way delay is only a few tens of ms at most,
-# but you can't measure it precisely without synchronised clocks. HFT firms co-locate next to the matching engine and
-# discipline their clocks with GPS / PTP to microseconds. For anything latency-sensitive, **know which clock each
-# timestamp came from**. Here we use the exchange's matching-engine time (`T`) throughout.
+# Most messages apparently **arrived before Binance sent them**. That's impossible, so one of the two clocks is wrong.
+# Plot the apparent latency against time:
+
+# %%
+minutes = (ts - ts[0]).astype("int64") / 60_000
+drift = ols(latency, minutes, names=["minutes"])
+fig, ax = plt.subplots()
+ax.plot(minutes[::20], latency[::20], ".", ms=1, color=BLUE, alpha=0.4, label="receive − send, every 20th message")
+ax.plot(minutes, drift.beta[0] + drift.beta[1] * minutes, color=ORANGE, lw=2,
+        label=f"fit: {drift.beta[1] * 60:+.0f} ms per hour")
+ax.set(xlabel="minutes since recording started", ylabel="apparent latency (ms)", ylim=(-250, 150),
+       title="Our PC's clock drifts steadily away from Binance's")
+ax.legend()
+save(fig, "10_clock_drift")
+print(f"drift: {drift.beta[1] * 60:+.1f} ms per hour = {drift.beta[1] / 60_000 * 1e6:+.0f} parts per million")
+print(f"apparent latency at the start: {drift.beta[0]:.0f} ms")
+
+# %% [markdown]
+# A straight line. The apparent latency falls by the same amount every minute, which is the signature of **clock
+# drift**: the PC's quartz oscillator runs slightly off, and Windows only re-syncs it with a time server
+# occasionally. Tens of parts per million is ordinary for consumer hardware, yet it's enough to swamp the real network
+# delay (a few tens of ms) within half an hour.
+#
+# Lessons for any latency-sensitive work:
+# - **Know which clock each timestamp came from.** Here we use the exchange's matching-engine time (`T`) for all
+#   analysis, so our drifting clock doesn't matter.
+# - One-way latency can't be measured without synchronised clocks. HFT firms discipline theirs with GPS / PTP to
+#   within microseconds, and co-locate next to the matching engine so the true latency is microseconds too.
 #
 # ## The shape of the book
 
@@ -133,11 +156,17 @@ ax.legend()
 save(fig, "10_multilevel_ofi")
 
 # %% [markdown]
-# Compare the two curves. In-sample R² rises with every level added, as it must (chapter 9). Whether the deeper
-# levels carry genuine information is decided by the out-of-sample curve. In this recording the deep levels hold so
-# little volume that their OFI is mostly noise, and the extra coefficients mostly fit noise too. On books with
-# substantial depth behind the touch (small-tick stocks, less liquid contracts), multi-level OFI is reported to add
-# real explanatory power. The answer depends on the market's microstructure, which is why we measure.
+# Here deeper levels **do** carry information that survives out of sample: going from 1 to 20 levels lifts
+# out-of-sample R² from about 0.34 to about 0.46. Small orders sitting a few ticks behind the touch get added and
+# pulled as traders anticipate where the price is going, so their flow is informative even though their size is tiny.
+#
+# Two honesty checks:
+# - Out-of-sample R² is *higher* than in-sample here. That doesn't mean the model got better on new data. The second
+#   hour was simply more predictable than the first, which says the relationship isn't perfectly stable over time
+#   (non-stationarity). With one recording, the exact numbers are fragile.
+# - In the first 20 minutes of this same recording, the deeper levels *didn't* help out of sample. Small samples
+#   give unstable answers. Two hours is enough to see the effect, but a careful study would use many days and report
+#   how often the improvement holds.
 #
 # ## The same market, 2½ years apart
 #
