@@ -28,7 +28,7 @@ and checked against a reference implementation or a simulation with known answer
 | 7 | [Price impact](notebooks/07_price_impact.ipynb) | How much does trading move prices? | Impact is concave, ∝ size^0.3–0.6. Kyle's λ ≈ 0.3 USDT per BTC from 10 s to 15 min. Includes a square-root-law cost calculator. |
 | 8 | [Hawkes clustering](notebooks/08_hawkes_clustering.ipynb) | Are arrivals Poisson? | No: the Fano factor reaches 12,000 at 10-minute windows. A Hawkes fit gives a branching ratio of **0.29** in a quiet hour and **0.76** at the US open, checked by time-rescaling QQ plots. |
 | 9 | [A signal and its costs](notebooks/09_signal_and_costs.ipynb) | Is there money in it? | Out-of-sample R² 3.7% and a 69% hit rate, but the edge is **0.5 bp** against **10 bp** of taker fees. Includes latency decay and an overfitting demo. |
-| 10 | [Beyond level one](notebooks/10_depth_beyond_level_one.ipynb) | Does the deeper book help? | Self-recorded 20-level book: a liquidity wall at the touch with crumbs behind. Event-level OFI beats 100 ms snapshots. Out of sample, deeper levels mostly add noise. |
+| 10 | [Beyond level one](notebooks/10_depth_beyond_level_one.ipynb) | Does the deeper book help? | Self-recorded 2 h of the 20-level book: a liquidity wall at the touch with crumbs behind, yet adding 20 levels of OFI lifts out-of-sample R² from **0.34 to 0.46**. Event-level OFI beats 100 ms snapshots (0.48 vs 0.34). Bonus: the PC's clock drifted 87 ms/hour. |
 
 Each chapter ends with **interview questions** (with answers) and **exercises**.
 
